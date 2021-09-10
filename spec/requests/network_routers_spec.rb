@@ -222,7 +222,6 @@ RSpec.describe 'NetworkRouters API' do
   describe 'OPTIONS /api/network_routers/:id' do
     it 'returns a DDF schema for edit when available via OPTIONS' do
       network_router = FactoryBot.create(:network_routers)
-
       allow(NetworkRouter).to receive(:find).with(network_router.id.to_s).and_return(network_router)
       allow(Rbac).to receive(:filtered_object).and_return(network_router)
       expect(network_router).to receive(:params_for_edit).and_return('foo')
