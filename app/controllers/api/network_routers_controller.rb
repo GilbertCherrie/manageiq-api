@@ -50,10 +50,10 @@ module Api
     end
 
     def options
-      if params.key?("ems_id")
-        options_by_ems_id
-      elsif params.key?("id")
+      if params.key?("id")
         options_by_id
+      elsif params.key?("ems_id")
+        options_by_ems_id
       else
         super
       end
