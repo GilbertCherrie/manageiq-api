@@ -13,6 +13,45 @@ module Api
         result
       end
 
+      def create_action_result_handler(type, ems_id, options = {})
+        ems = resource_search(ems_id, :ext_management_systems, ExtManagementSystem)
+        generic_klass = collection_class(type)
+        klass = generic_klass.class_by_ems(ems)
+        action = :create
+        raise BadRequestError, "Create #{type.to_s.titleize} for Provider #{ems.name}: #{klass.unsupported_reason(action)}" unless klass.supports?(action)
+
+        ret = yield(ems)
+
+        if options[:task_id]
+          action_result(true, "Creating #{type.to_s.titleize} #{options[:task_name]} for Provider: #{ems.name}", :task_id => ret)
+        end
+      rescue => err
+        action_result(false, err.to_s)
+      end
+
+      # @param action :update, :delete
+      def action_result_handler(type, id, action, options = {})
+        model = resource_search(id, type, collection_class(type))
+        raise BadRequestError, "#{action.to_s.titleize} for #{type.to_s.titleize}: #{model.unsupported_reason(action)}" unless model.supports?(action)
+
+        ret = yield(model)
+
+        if options[:task_id]
+          action_phrase = {:create => 'Creating', :update => 'Updating', :delete => 'Deleting'}[action] || action
+          action_result(true, "#{action_phrase} #{model_ident(model)}", :task_id => ret)
+        end
+      rescue ActiveRecord::RecordNotFound => err
+        single_resource? ? raise(err) : action_result(false, err.to_s)
+      rescue => err
+        action_result(false, err.to_s)
+      end
+
+      # this should be the same for a majority of the models
+      # override in the controller if the id and name is different for this model
+      def model_ident(model)
+        "#{model.class.base_class.name.titleize} id: #{model.id} name: '#{model.name}'"
+      end
+
       def queue_object_action(object, summary, options)
         task_options = {
           :action => summary,
